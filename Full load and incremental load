@@ -1,0 +1,50 @@
+Smart Data Loading: Master Full & Incremental Loads in SCD Implementations.
+
+In any ETL or data warehousing pipeline, how you load data matters just as much as how you transform it. Two core loading strategies-Full Load and Incremental Load are often applied differently depending on whether you're implementing SCD Type 1 or SCD Type 2.
+
+Full Load
+
+In a full load, the entire dataset is reloaded from source to target every time, regardless of whether data has changed.
+
+Simple to develop and maintain
+
+Often used in small or static datasets
+
+Best suited for scenarios where data volume is low or change tracking isn't feasible
+
+Incremental Load
+
+Only new, updated, or deleted records are processed based on a tracking column (like last updated date, version number, or hash comparison).
+
+Highly efficient for large datasets
+
+Minimizes compute and I/O
+
+Ideal for real-time or frequent data refresh scenarios
+
+
+How They Integrate with SCDs (Slowly Changing Dimensions):
+
+SCD Type 1 - No History
+
+Used when historical data is not required. The record is simply overwritten.
+
+With incremental load, only changed rows are updated.
+
+Best for correcting errors or minor changes like spelling fixes.
+
+SCD Type 2 - Preserves History
+
+Used when historical tracking is required. A new row is inserted with a new surrogate key and version/timestamp.
+
+Incremental load plays a crucial role here to identify changes and preserve historical records.
+
+Best for business-critical dimensions like customer info, product pricing, etc.
+
+When to Use?
+
+Use Full Load in dev/testing or with small datasets.
+
+Use Incremental Load with SCD2 for production-grade data warehouses that need auditability and history tracking.
+
+Combine with CDC (Change Data Capture) or watermarking for high-performance pipelines.
