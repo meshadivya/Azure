@@ -1,0 +1,34 @@
+What is Parameterization?
+
+In ADF, parameterization refers to the process of replacing static values with dynamic values that can be changed at runtime. This allows you to make your pipelines more flexible and reusable.
+
+Why Parameterization?
+
+Parameterization helps in several ways:
+
+1. Increased Reusability: By parameterizing datasets, you can reuse the same pipeline with different datasets, reducing the need to create multiple pipelines.
+2.Improved Flexibility: You can change the dataset or schema without modifying the pipeline code.
+3. Simplified Maintenance: Updating the dataset or schema is easier, as you only need to update the parameterized value.
+
+How to Parameterize a Dataset
+
+To parameterize a dataset in ADF, follow these steps:
+
+Step 1: Go to the Dataset
+
+In the Azure Data Factory portal, navigate to the "Datasets" section and select the dataset you want to parameterize.
+
+Step 2: Add a Parameter
+
+Click on the "Parameters" tab and add a new parameter. Give a name to the parameter, for example, `@dataset().schemaName`.
+and @dataset().tableName
+
+
+In this example, I've selected the `salesLT` schema, so I've given `@dataset().schemaName` as `salesLT`.
+
+**Step 4: Sink Side Parameterization**
+
+At the sink side, you'll also need to parameterize the Adls storage. Click on the "Sink" tab and add a new parameter. Give a name to the parameter, for example, @dataset().Folder
+
+
+In this example, we've parameterized the schema name at both the source and sink sides using `@dataset().schemaName,@dataset().tableName` and `@dataset().Folder` respectively.
