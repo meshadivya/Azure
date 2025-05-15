@@ -1,0 +1,48 @@
+
+To transform large volumes of customer transaction data efficiently in Azure Data Factory (ADF) dataflows, you can focus on the following strategies:
+
+Minimize Data Movement and Volume:
+
+Partitioning strategy: ensure that your source data is partitioned, so adf can perform parallel processing. This reduces the amount of data read into memory, improving overall throughput.
+
+Filter early: apply filters as early as possible in your dataflows to reduce the amount of data being processed. Use partition pruning techniques to limit the dataset before transformations.
+
+Column pruning: only select the necessary columns that are needed for your transformations or output. Avoid moving or transforming unneeded data.
+
+Incremental loading: implement delta or incremental loading using watermarking or change data capture techniques. This reduces the volume of data processed daily by only focusing on the new or updated data.
+
+Leverage Pushdown Computation:
+
+Enable query pushdown: when connecting to a database or storage source, enable pushdown to offload as much computation as possible to the source system, reducing the data that adf must handle directly. For example, sql transformations can be pushed to databases like azure sql or synapse sql.
+
+Limit data movement: use a dataflow design that minimizes movement between sources and sinks. Push filtering, joins, and aggregations into the database or storage layer by leveraging optimized queries directly within adf.
+
+Efficient Aggregations:
+
+Use aggregate transformations: perform aggregations within adf’s aggregate transformation. Ensure that these operations are as simple as possible and are preceded by filter transformations to reduce data volume.
+
+Leverage pre-aggregated data: if feasible, pre-aggregate or summarize data in the source system or during the ingestion process. This approach avoids reprocessing large datasets daily.
+
+Optimized Expressions:
+
+Simplify expressions: keep expressions simple and avoid over-complicating logic within the dataflow expressions. Reuse expressions whenever possible and avoid deeply nested conditions that may slow performance.
+
+Avoid unnecessary conversions: reduce typecasting and data conversions unless absolutely necessary. Stick to native data types to avoid the overhead of conversions.
+
+Use constants and variables: avoid repeatedly computing the same value within the dataflow. Instead, use variables or constants to store results of expressions that can be reused.
+
+Integration Runtime Tuning:
+
+Optimize Integration Runtime (IR):
+Scale your integration runtime to match the dataset size. Increase core count and memory for larger datasets but avoid over-provisioning, which may lead to unnecessary costs. Enable auto-scaling for elastic scaling during peak loads. Use data flow debug mode to analyze bottlenecks in your data flow execution and fine-tune the performance.
+
+Adjust Spark Settings:
+For large datasets, adjust the batch size for better partitioning. The default is 512 mb, but for very large datasets, you might need to increase this. Enable spark dynamic allocation to scale workers dynamically based on the amount of work. Leverage azure integration runtime with ssd-backed storage for faster execution.
+
+Use Cache:
+
+Use data flow caching to avoid recomputing the same transformations during multiple stages of the pipeline. This can be especially beneficial for repeated lookups or reference datasets.
+
+By these strategies, you can minimize data movement, leverage pushdown computation, and optimize aggregations and performance in ADF dataflows, ensuring efficient processing of large transaction datasets.
+
+Please 'Upvote'(Thumbs-up) and 'Accept' as an answer if the reply was helpful. This will benefit other community members who face the same issue.
