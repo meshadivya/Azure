@@ -1,0 +1,278 @@
+Spark Scenario-Based Questions - Detailed Answers
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1. Catalyst Optimizer Internals and Failure Handling
+How Catalyst Optimizer works:
+
+Catalyst is Spark SQL's query optimization framework that uses a tree transformation approach
+
+Works in 4 main phases:
+
+Analysis: Resolves references using catalog, checks types, validates schema
+
+Logical Optimization: Applies rule-based optimizations (constant folding, predicate pushdown, column pruning)
+
+Physical Planning: Converts logical plan to physical plan (selecting join strategies, determining shuffle locations)
+
+Code Generation: Generates efficient Java bytecode using "whole-stage code generation"
+
+Detecting and fixing optimization failures:
+
+Symptoms: Unexpected query plans, poor performance, wrong results
+
+Detection:
+
+Use df.explain(true) to see parsed, analyzed, optimized, and physical plans
+
+Check Spark UI for unexpected operations
+
+Fixes:
+
+Add explicit hints (e.g., /*+ BROADCASTJOIN */)
+
+Break complex queries into simpler steps
+
+Disable specific optimizations with configs if needed
+
+Verify statistics with ANALYZE TABLE
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2. Persist Storage Levels Comparison
+MEMORY_ONLY vs DISK_ONLY_2:
+
+MEMORY_ONLY: Stores RDD/DataFrame only in memory (no disk), partitions that don't fit are recomputed
+
+DISK_ONLY_2: Stores on disk with replication factor of 2 (two different nodes)
+
+When to prefer DISK_ONLY_2:
+
+When datasets are too large for available memory
+
+For fault tolerance requirements where recomputation would be expensive
+
+For long-term caching between multiple jobs/restarts
+
+When working with spot instances or unreliable clusters
+
+For intermediate results in ETL pipelines where recomputation would be costly
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3. Handling Frequent Shuffle Failures
+Solutions for wide transformation shuffle failures:
+
+Code redesign:
+
+Reduce partition skew with salting technique
+
+Increase spark.sql.shuffle.partitions (default 200 may be too low)
+
+Use repartition before the wide transformation to evenly distribute data
+
+Consider alternative approaches (broadcast joins, map-side operations)
+
+Cluster setup changes:
+
+Increase executor memory to handle larger shuffle blocks
+
+Tune spark.shuffle.file.buffer and spark.shuffle.spill parameters
+
+Use better disk hardware (SSD for shuffle files)
+
+Increase spark.shuffle.service.enabled for external shuffle service
+
+Adjust spark.reducer.maxSizeInFlight for better network utilization
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4. Window Functions vs GroupBy
+Advantages of Window functions:
+
+Preserve original row granularity while adding aggregated values
+
+Avoid expensive shuffles required by groupBy
+
+Enable complex analytics (running totals, rankings, moving averages)
+
+More expressive for certain operations (lead/lag, percentiles)
+
+Mandatory Window function example:
+Calculating running totals or rankings where you need to maintain original rows:
+
+python
+from pyspark.sql.window import Window
+from pyspark.sql import functions as F
+
+windowSpec = Window.partitionBy("department").orderBy("salary")
+
+df.withColumn("rank", F.rank().over(windowSpec)) \
+  .withColumn("running_total", F.sum("sales").over(windowSpec))
+Here, groupBy would collapse the data, losing individual row context.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+5. Tuning for Small Data with Default Shuffle Partitions
+Tuning strategies for small data (~5GB):
+
+Reduce shuffle partitions:
+
+python
+spark.conf.set("spark.sql.shuffle.partitions", "50")  # Much lower than default 200
+Adjust executor configuration:
+
+Fewer, larger executors rather than many small ones
+
+Example: 2 executors with 4 cores each instead of 8 executors with 1 core
+
+Enable adaptive query execution:
+
+python
+spark.conf.set("spark.sql.adaptive.enabled", "true")
+Cache small datasets if reused:
+
+python
+df.persist(StorageLevel.MEMORY_ONLY)
+Broadcast small tables automatically:
+
+python
+spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "50MB")
+Check for data skew even with small datasets
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+6. Optimizing Join with Extremely Small Table
+Optimization approach:
+Use a broadcast join which sends the small table to all executors, avoiding shuffle.
+
+Specific command:
+
+python
+from pyspark.sql.functions import broadcast
+
+# Method 1: Automatic (if under broadcast threshold)
+df_large.join(df_small, "join_key")
+
+# Method 2: Explicit broadcast hint
+df_large.join(broadcast(df_small), "join_key")
+Additional optimizations:
+
+Ensure spark.sql.autoBroadcastJoinThreshold is large enough (default 10MB)
+
+If the small table is just over threshold, consider filtering first
+
+For slightly larger tables, use repartition on join key before joining
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+7. repartition(1) Internals and Dangers
+What happens internally:
+
+All data must be collected to a single partition on one executor
+
+Requires full shuffle of entire dataset
+
+All subsequent operations become single-threaded
+
+Dangers at scale:
+
+Memory issues: Single executor must hold entire dataset
+
+Performance bottleneck: No parallelism, defeats Spark's purpose
+
+Disk spills: May overflow to disk causing severe slowdown
+
+Failure risk: Single point of failure for the job
+
+When to use (rare cases):
+
+Final step before writing a single output file
+
+For very small datasets where global ordering is required
+
+After heavy filtering when data volume is minimal
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+8. Solving Join Skew for "India" Key
+Solutions for join skew:
+
+Salting technique:
+
+python
+# Add random salt to skewed keys
+from pyspark.sql import functions as F
+
+salt_count = 10  # Number of splits for skewed key
+
+df_skewed = df_skewed.withColumn(
+    "salted_key",
+    F.when(F.col("country") == "India", 
+           F.concat(F.col("country"), F.lit("_"), F.floor(F.rand() * salt_count)))
+           .otherwise(F.col("country"))
+)
+
+# Join on salted key
+result = df1.join(df2, "salted_key")
+Broadcast join if one table is small enough
+
+Skew join hint (Spark 3.0+):
+
+python
+df1.join(df2.hint("skew", "country", ["India"]), "country")
+Adaptive Query Execution (enable in Spark 3.0+):
+
+python
+spark.conf.set("spark.sql.adaptive.enabled", "true")
+spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+9. Structured Streaming Output Modes
+Output Mode Differences:
+
+Append:
+
+Only adds new rows to result table
+
+Used with operations like select, where, map
+
+Cannot be used with aggregations (unless with watermark)
+
+Update:
+
+Outputs only rows that changed since last trigger
+
+Updates existing rows in sink
+
+Works with most operations including aggregations
+
+Complete:
+
+Outputs entire result table every trigger
+
+Required for unbounded aggregations (no watermark)
+
+When to pick Complete:
+
+When you need full results after each micro-batch
+
+For dashboard visualizations showing complete state
+
+With aggregations where you need all historical data (e.g., total counts)
+
+When using operations that don't support Update/Append (like sort)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+10. Handling Schema Evolution in Parquet
+Approach for schema evolution:
+
+Set mergeSchema option:
+
+python
+df = spark.read.option("mergeSchema", "true").parquet("/path/to/files")
+Important properties to set:
+
+python
+spark.conf.set("spark.sql.parquet.mergeSchema", "true")  # Global setting
+spark.conf.set("spark.sql.parquet.respectSummaryFiles", "true")
+spark.conf.set("spark.hadoop.parquet.enable.summary-metadata", "true")
+Handling strategy:
+
+New columns will be added with nulls for old records
+
+Changed column types may cause issues (need manual resolution)
+
+For complex cases, consider schema registry or explicit schema:
+
+python
+custom_schema = StructType([...])
+df = spark.read.schema(custom_schema).parquet(...)
+Write considerations:
+
+python
+df.write.option("mergeSchema", "true").parquet(...)
