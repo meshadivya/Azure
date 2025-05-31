@@ -1,0 +1,280 @@
+#Cognizant_Technology_Solution for Pyspark developer interview for candidates with 3+ years of experience.
+Question was asked during the Interview:
+
+1. Can you tell me about yourself and what you have worked on in your project?
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+2. What will be the output of inner, outer, left, right, and cartesian joins?
+A B
+1 null
+null 2
+null 2 
+3 1
+6 5
+4 6
+6
+
+1. INNER JOIN (A.key = B.key)
+Returns only matching rows from both tables:
+
+3 1  (A=3 joins with B=1)
+6 6  (A=6 joins with B=6)
+6 6  (A=6 joins with B=6)
+4 6  (A=4 joins with B=6)
+2. FULL OUTER JOIN
+Returns all rows from both tables, with NULLs where no match:
+
+1   null
+null 2
+null 2
+3   1
+6   5
+4   6
+6   6
+6   null (if there's another 6 in A not matched in B)
+null 6 (if there's another 6 in B not matched in A)
+3. LEFT JOIN
+Returns all rows from left table (A) with matching rows from right (B), or NULLs:
+
+1   null
+null null
+null null
+3   1
+6   5
+4   6
+6   6
+6   null (if there's another 6 in A not matched in B)
+4. RIGHT JOIN
+Returns all rows from right table (B) with matching rows from left (A), or NULLs:
+
+null 2
+null 2
+3   1
+6   5
+4   6
+6   6
+null 6 (if there's another 6 in B not matched in A)
+5. CARTESIAN JOIN (CROSS JOIN)
+Returns all possible combinations (7 rows in A × 6 rows in B = 42 rows):
+
+1   null
+1   2
+1   2
+1   1
+1   5
+1   6
+null null
+null 2
+null 2
+null 1
+null 5
+null 6
+... (and so on for all combinations)
+6   6
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+3. You are given an Employee table with the columns emp_id, emp_name, emp_dept, and emp_salary. Write SQL and PySpark queries to find the maximum and the second lowest salary in each department?
+
+with my_cte as 
+(select *, dense_rank() over(partition by emp_dept order by emp_salary desc) as max_rank,
+dense_rank() over(partition by emp_dept order by emp_salary asc) as min_rank
+from employee)
+select * from my_cte where max_rank = 1 or min_rank = 2
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+4. Swap the two string with out using third variable in python ?
+a,b = 1,2
+a,b = b,a 
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+5. Write a python code to check given string is palindrome or not?
+string = "abc"
+string2= string[::-1]
+if string == string2:
+   print("palindrome")
+else:
+print("not a palindrome")
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+6. You have given a string "Apple" 
+Write a Python program to find the number of vowels in a given string?
+v = ['a','e','i','o','u']
+string = "aeiou"
+string = list(string)
+count = 0
+for i in string:
+  if i in v:
+      count = count + 1
+print(count)
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+7. Input: arr1=[7,5,1,10,9], arr2=[3,8,2,6,4] 
+Write a Python program to sort two arrays and merge them?
+arr1 = [7,5,1,10,9]
+arr2 = [3,8,2,6,4]
+arr3 = []
+arr1.sort()  # Sorts arr1 in-place
+arr2.sort()  # Sorts arr2 in-place
+arr3 = arr1 + arr2
+print(arr3)  # Output: [1, 5, 7, 9, 10,2, 3, 4, 6, 8]
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+8. You are given a file that contains some corrupted data. How would you identify and separate the corrupted data from the file using databricks?
+using read modes
+1.permissive mode
+2. dropmal format mode
+3. failfast
+4. bad record file path
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+9. Describe the spark architecture?
+1. driver node - dag scheduler- cluster manager- worker node - executor
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+10. What is SCD2 ? 
+preserving old data as a record instead of overwriting the data.
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+11. What is fact table and dimension table and what kind of data inside it?
+Fact Tables vs Dimension Tables
+Fact Tables (Measurable Data)
+What they contain:
+
+Quantitative, numerical measurements (facts/metrics)
+
+Foreign keys that link to dimension tables
+
+Business process measurements (what happened)
+
+Characteristics:
+
+Typically large in size (many rows)
+
+Contains mostly numeric data
+
+Changes frequently as new transactions occur
+
+Examples: Sales amounts, quantities, durations, counts
+
+Sample fact table data:
+
+order_id | product_id | customer_id | date_id | quantity | unit_price | total_amount
+---------|------------|-------------|---------|----------|------------|-------------
+1001     | P203       | C872        | D202301 | 2        | 19.99      | 39.98
+1002     | P156       | C901        | D202301 | 1        | 49.99      | 49.99
+Dimension Tables (Descriptive Data)
+What they contain:
+
+Descriptive attributes that provide context
+
+Textual information about business entities
+
+Reference data that categorizes facts
+
+Characteristics:
+
+Typically smaller than fact tables
+
+Contains mostly textual/descriptive data
+
+Changes less frequently than fact tables
+
+Examples: Product details, customer info, dates
+
+Sample dimension table data (Product dimension):
+
+product_id | product_name  | category   | brand    | color
+-----------|---------------|------------|----------|-------
+P203      | Wireless Mouse| Electronics| Logitech | Black
+P156      | Yoga Mat      | Fitness    | Nike     | Blue
+Key Differences
+Feature	Fact Table	Dimension Table
+Purpose	Store measurements	Provide context
+Data Type	Numeric (mostly)	Textual (mostly)
+Size	Large (many rows)	Smaller
+Change Rate	Frequent updates	Infrequent updates
+Primary Key	No (has foreign keys)	Yes
+Example	Sales transactions	Product descriptions
+How They Work Together
+In a star schema data warehouse:
+
+Fact tables sit at the center
+
+Dimension tables connect via foreign keys
+
+Example relationship:
+
+FACT_SALES ┬── DIM_PRODUCT
+           ├── DIM_CUSTOMER
+           ├── DIM_DATE
+           └── DIM_STORE
+This structure enables powerful analytical queries that combine measurable facts with descriptive dimensions.
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+12. What kind of file format you receive from source?
+csv
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+13. what is the advantage parquet file over csv file format? you have given avro and parquet file format which file format is more Splitable ?
+Parquet vs CSV vs Avro: Advantages and Splitability
+Advantages of Parquet over CSV
+Columnar Storage:
+
+Parquet stores data column-wise (vs row-wise in CSV)
+
+Enables efficient column pruning (reading only needed columns)
+
+Compression:
+
+Parquet offers better compression (typically 2-10x smaller than CSV)
+
+Supports various codecs (Snappy, Gzip, LZO)
+
+Schema Evolution:
+
+Parquet embeds schema information
+
+Handles schema changes better than CSV
+
+Performance:
+
+Faster queries (especially for analytical workloads)
+
+Predicate pushdown (filtering before reading data)
+
+Type Safety:
+
+Preserves data types (CSV treats everything as strings)
+
+Metadata:
+
+Rich statistics (min/max values, counts per column)
+
+Better for distributed processing
+
+Splitability Comparison: Parquet vs Avro
+Parquet:
+
+Highly splitable due to its columnar format
+
+Data is divided into row groups (typically 128MB each)
+
+Each row group can be processed independently
+
+Ideal for distributed processing frameworks like Spark
+
+Avro:
+
+Row-based format (less splitable than Parquet)
+
+Uses blocks with sync markers for splitting
+
+Less efficient for columnar operations
+
+Better for write-heavy, row-oriented workloads
+
+Which is more splitable?:
+Parquet is generally more splitable than Avro, especially for analytical workloads where you typically read subsets of columns. Parquet's columnar organization and row group structure make it ideal for parallel processing in big data systems.
+
